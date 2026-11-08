@@ -1,0 +1,1002 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Paleta Pastel y Verde Tenue */
+  --pastel-green: #58a379;
+  --pastel-green-light: #eaf4ee;
+  --pastel-green-hover: #488f66;
+  --pastel-green-border: #c6e3d2;
+  --pastel-green-glow: rgba(88, 163, 121, 0.25);
+  
+  --pastel-teal: #4fa3a5;
+  --pastel-teal-light: #e6f4f4;
+  --pastel-teal-hover: #3d8c8e;
+  
+  --pastel-rose: #ea6c83;
+  --pastel-rose-light: #fdedf0;
+  --pastel-rose-hover: #d7546c;
+
+  /* Fondos y Superficies Neutras */
+  --app-bg: #f8fafc;
+  --panel-bg: rgba(255, 255, 255, 0.92);
+  --panel-border: rgba(226, 232, 240, 0.95);
+  --panel-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+
+  /* Tipografía Profesional */
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+
+  /* Bordes Redondeados Sutiles (no tan redondos) */
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body {
+  background-color: var(--app-bg);
+  color: var(--text-main);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lienzo de Laboratorio en segundo plano */
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+#webgl-canvas,
+#lab-canvas-2d {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Capa de la Interfaz (HUD) */
+#hud-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Permitir clics en los paneles */
+.persona-panel,
+.persona-header,
+.persona-btn,
+input,
+button {
+  pointer-events: auto;
+}
+
+/* ===================================================
+   HEADER SUPERIOR - Elegante, Limpio y Profesional
+   =================================================== */
+.persona-header {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  color: var(--text-main);
+  padding: 10px 22px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--panel-shadow);
+  margin-bottom: 16px;
+  align-self: flex-start;
+  transform: none; /* Eliminar skew */
+}
+
+.header-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.glitch-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.glitch-title .highlight {
+  color: var(--pastel-green);
+  font-weight: 600;
+}
+
+.sub-badge {
+  font-size: 0.76rem;
+  font-weight: 500;
+  background: var(--pastel-green-light);
+  color: var(--pastel-green-hover);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  letter-spacing: 0.02em;
+}
+
+.system-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 32px;
+  padding-left: 20px;
+  border-left: 1px solid var(--panel-border);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pastel-green);
+  box-shadow: 0 0 0 3px var(--pastel-green-glow);
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.7; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+/* ===================================================
+   DISPOSICIÓN PRINCIPAL Y PANELES (Cards)
+   =================================================== */
+.hud-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex: 1;
+  pointer-events: none;
+}
+
+/* Columna Izquierda: Sensor de pH & Balances al lado de Muestra Problema + Control de Bureta */
+.hud-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 580px;
+  pointer-events: auto;
+}
+
+.hud-left-top-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.hud-left-top-row .persona-panel {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+/* Columna Derecha: Cámara MediaPipe ampliada y Curva de Titulación en Vivo amplia */
+.hud-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 440px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  pointer-events: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pastel-green-border) transparent;
+}
+
+.hud-right-column::-webkit-scrollbar {
+  width: 5px;
+}
+
+.hud-right-column::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hud-right-column::-webkit-scrollbar-thumb {
+  background: var(--pastel-green-border);
+  border-radius: 4px;
+}
+
+.hud-right-column::-webkit-scrollbar-thumb:hover {
+  background: var(--pastel-green);
+}
+
+/* Tarjeta Base - Bordes redondeados sutiles */
+.persona-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  box-shadow: var(--panel-shadow);
+  width: 100%;
+  margin-bottom: 0;
+  transform: none; /* Eliminar skew */
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.persona-panel:hover {
+  border-color: var(--pastel-green-border);
+  box-shadow: 0 8px 28px -4px rgba(15, 23, 42, 0.09);
+}
+
+/* Form Groups y Selects */
+.form-group {
+  margin-bottom: 11px;
+}
+
+.form-group .label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.70rem;
+  letter-spacing: 0.04em;
+}
+
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.persona-select {
+  width: 100%;
+  appearance: none;
+  background-color: #f8fafc;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 7px 30px 7px 11px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.persona-select:hover {
+  border-color: var(--pastel-green);
+  background-color: #ffffff;
+}
+
+.persona-select:focus {
+  border-color: var(--pastel-green);
+  box-shadow: 0 0 0 3px var(--pastel-green-glow);
+  background-color: #ffffff;
+}
+
+/* Mini Card Informativa de Indicador */
+.indicator-info-card {
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.25s ease;
+}
+
+.indicator-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.indicator-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #ec4899;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.indicator-name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+  flex: 1;
+}
+
+.indicator-suitability-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--pastel-green-light);
+  color: var(--pastel-green-hover);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.indicator-suitability-badge.warning {
+  background: var(--pastel-rose-light);
+  color: var(--pastel-rose-hover);
+}
+
+.indicator-desc-text {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.panel-header,
+.panel-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-header::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 14px;
+  background: var(--pastel-green);
+  border-radius: 2px;
+}
+
+/* ===================================================
+   PANEL QUÍMICO (pH y Volúmenes)
+   =================================================== */
+.stat-box {
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.value-badge {
+  background: var(--pastel-green-light);
+  color: var(--pastel-green-hover);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  padding: 2px 14px;
+  border-radius: var(--radius-md);
+  display: inline-block;
+  transform: none;
+  box-shadow: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.stat-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 14px 0;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.value-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.stat-item #vol-value {
+  color: var(--pastel-green-hover);
+  font-weight: 700;
+}
+
+/* Barra de pH Minimalista */
+.ph-bar-wrapper {
+  margin-top: 14px;
+}
+
+.ph-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 6px;
+}
+
+.ph-bar-container {
+  width: 100%;
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  border: none;
+  overflow: hidden;
+}
+
+.ph-bar-fill {
+  height: 100%;
+  width: 7%;
+  background: var(--pastel-green);
+  border-radius: 4px;
+  box-shadow: none;
+  transition: width 0.25s ease, background-color 0.3s ease;
+}
+
+/* ===================================================
+   PANEL DE VISIÓN ARTIFICIAL (MediaPipe)
+   =================================================== */
+.vision-panel {
+  width: 100%;
+}
+
+.camera-feed-container {
+  width: 100%;
+  height: 310px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--panel-border);
+  background: #0f172a;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+#camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  display: block;
+}
+
+#camera-overlay-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  display: block;
+}
+
+.gesture-status-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  color: #ffffff;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ===================================================
+   CONTROLES DE VÁLVULA Y AGITACIÓN
+   =================================================== */
+.valve-controls {
+  width: 100%;
+}
+
+.valve-status {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.valve-status span {
+  color: var(--pastel-green-hover);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Control Slider Estilizado */
+input[type=range] {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--pastel-green);
+  background: #e2e8f0;
+  border-radius: 3px;
+  margin: 10px 0;
+  cursor: pointer;
+  outline: none;
+}
+
+/* ===================================================
+   BOTONES PROFESIONALES CON BORDES REDONDEADOS
+   =================================================== */
+.button-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.persona-btn {
+  background: var(--pastel-green);
+  color: #ffffff;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transform: none;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.persona-btn:hover {
+  background: var(--pastel-green-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px -2px var(--pastel-green-glow);
+}
+
+.persona-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+}
+
+.persona-btn.secondary {
+  background: var(--pastel-teal);
+  color: #ffffff;
+}
+
+.persona-btn.secondary:hover {
+  background: var(--pastel-teal-hover);
+  box-shadow: 0 4px 10px -2px rgba(79, 163, 165, 0.3);
+}
+
+.persona-btn.alert {
+  background: var(--pastel-rose);
+  color: #ffffff;
+}
+
+.persona-btn.alert:hover {
+  background: var(--pastel-rose-hover);
+  box-shadow: 0 4px 10px -2px rgba(234, 108, 131, 0.3);
+}
+
+/* Botón de Cámara en panel secundario */
+#btn-camera {
+  background: #f1f5f9;
+  color: var(--text-main);
+  border: 1px solid var(--panel-border);
+  font-size: 0.8rem;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  width: 100%;
+  margin-top: 10px;
+}
+
+#btn-camera:hover {
+  background: var(--pastel-green-light);
+  color: var(--pastel-green-hover);
+  border-color: var(--pastel-green-border);
+}
+
+.report-btn {
+  width: 100%;
+  margin-top: 10px;
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.report-btn:hover {
+  background: #0369a1;
+  box-shadow: 0 4px 12px -2px rgba(2, 132, 199, 0.35);
+}
+
+/* ===================================================
+   PANEL DE CURVA DE TITULACIÓN EN VIVO (pH vs mL)
+   =================================================== */
+.curve-panel {
+  width: 100%;
+  padding: 14px 16px;
+}
+
+.curve-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.live-indicator {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ef4444;
+  letter-spacing: 0.05em;
+  animation: pulseLive 1.4s infinite ease-in-out;
+}
+
+@keyframes pulseLive {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.curve-canvas-wrapper {
+  width: 100%;
+  height: 245px;
+  background: #ffffff;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+#titration-curve-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.curve-footer-note {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 6px;
+  text-align: right;
+}
+
+/* ===================================================
+   CARD DE MUESTRA REAL PROBLEMA
+   =================================================== */
+.sample-info-card {
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sample-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sample-badge-type {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--pastel-green-light);
+  color: var(--pastel-green-hover);
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+}
+
+.sample-formula {
+  font-family: 'Plus Jakarta Sans', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sample-desc-text {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+/* ===================================================
+   BANNERS DE ALERTA TÉCNICOS Y VISUALES
+   =================================================== */
+.alert-banner {
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffffff;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  padding: 12px 22px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.3);
+  z-index: 100;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 580px;
+  pointer-events: auto;
+}
+
+.alert-banner.warning {
+  background: #d97706;
+  border: 1px solid #b45309;
+  animation: softPulseAlert 2s infinite ease-in-out;
+}
+
+.alert-banner.danger {
+  background: #dc2626;
+  border: 1px solid #991b1b;
+  animation: shakeAlert 0.4s ease;
+}
+
+.alert-banner.success {
+  background: var(--pastel-green-hover);
+  border: 1px solid var(--pastel-green);
+}
+
+.alert-icon {
+  font-size: 1.6rem;
+}
+
+.alert-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.alert-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.alert-subtitle {
+  font-size: 0.76rem;
+  font-weight: 500;
+  opacity: 0.95;
+  line-height: 1.3;
+}
+
+@keyframes shakeAlert {
+  0%, 100% { transform: translate(-50%, -50%); }
+  20%, 60% { transform: translate(calc(-50% - 6px), -50%); }
+  40%, 80% { transform: translate(calc(-50% + 6px), -50%); }
+}
+
+/* ===================================================
+   MODAL DE REPORTE ANALÍTICO CUANTITATIVO
+   =================================================== */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.25);
+  width: 90%;
+  max-width: 520px;
+  overflow: hidden;
+  animation: modalPop 0.25s ease-out;
+}
+
+@keyframes modalPop {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--panel-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.modal-header h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  color: var(--text-main);
+}
+
+.modal-body {
+  padding: 18px 20px;
+}
+
+.modal-intro {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.report-data-box {
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.data-row strong {
+  color: var(--text-main);
+}
+
+.data-row code {
+  background: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.72rem;
+}
+
+.persona-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-md);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.persona-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+}
+
+.report-result-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-grade {
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--pastel-green-light);
+  color: var(--pastel-green-hover);
+  text-transform: uppercase;
+}
+
+.result-grade.warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.result-grade.danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.result-error {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.result-details {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.feedback-text {
+  margin-top: 4px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.hidden {
+  display: none !important;
+}
+
+@keyframes softPulseAlert {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.95; }
+  50% { transform: translate(-50%, -50%) scale(1.03); opacity: 1; }
+}

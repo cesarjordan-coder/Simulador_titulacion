@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Simulador Universitario de Titulación Química Analítica con Visión Artificial MediaPipe, Henderson-Hasselbalch, Curva en Vivo y Muestras Reales" />
+  <title>Simulador de Titulación Química Analítica</title>
+  <link rel="stylesheet" href="./src/styles/main.css" />
+  <!-- MediaPipe Hands & Camera Utils -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+  <!-- Contenedor del lienzo 2D / Canvas de laboratorio -->
+  <div id="canvas-container"></div>
+
+  <!-- Capa de Interfaz de Usuario -->
+  <div id="hud-wrapper">
+    
+    <!-- Header Principal Elegante y Riguroso -->
+    <header class="persona-header">
+      <div class="header-inner">
+        <h1 class="glitch-title">Laboratorio Analítico <span class="highlight">//</span> Titulación Potenciométrica</h1>
+        <span class="sub-badge">SIMULADOR UNIVERSITARIO • EQUILIBRIOS HENDERSON-HASSELBALCH & POLIPRÓTICOS</span>
+      </div>
+      <div class="system-status-badge">
+        <span class="status-dot" id="system-status-dot"></span>
+        <span id="system-status-text">SISTEMA ACTIVO</span>
+      </div>
+    </header>
+
+    <!-- Área principal con Paneles -->
+    <main class="hud-main">
+      <!-- Columna Izquierda: Sensor de pH & Balances al lado de Muestra Problema + Control de Bureta abajo -->
+      <div class="hud-left-column">
+        
+        <!-- Fila Superior: Sensor de pH & Balances al costado de Muestra Problema de Laboratorio -->
+        <div class="hud-left-top-row">
+          
+          <!-- Panel 1: Sensor de pH y Balances de Volumen -->
+          <section class="persona-panel chem-stats">
+            <div class="panel-header">Sensor de pH & Balances</div>
+            
+            <div class="stat-box">
+              <span class="label">Sensor de pH</span>
+              <div class="value-badge" id="ph-badge">
+                <span id="ph-value">2.92</span>
+              </div>
+            </div>
+
+            <div class="stat-grid">
+              <div class="stat-item">
+                <span class="label" id="titrant-label">Vol. NaOH</span>
+                <div class="value-text"><span id="vol-value">0.00</span> mL</div>
+              </div>
+              <div class="stat-item">
+                <span class="label">Bureta Rest.</span>
+                <div class="value-text"><span id="burette-value">50.00</span> mL</div>
+              </div>
+              <div class="stat-item">
+                <span class="label">Vol. Matraz</span>
+                <div class="value-text"><span id="flask-value">20.00</span> mL</div>
+              </div>
+              <div class="stat-item">
+                <span class="label">Pto. Eq. Teórico</span>
+                <div class="value-text" id="eq-point-info" style="color: var(--pastel-green-hover); font-size: 0.80rem;">16.70 mL (pH 8.71)</div>
+              </div>
+              <div class="stat-item">
+                <span class="label">Homogeneidad</span>
+                <div class="value-text"><span id="agitation-value" style="color: var(--pastel-teal);">100% (Óptima)</span></div>
+              </div>
+            </div>
+
+            <!-- Barra de Sensor de pH con escalas analíticas -->
+            <div class="ph-bar-wrapper">
+              <div class="ph-bar-labels">
+                <span>0 (Ácido)</span>
+                <span>7 (Neutro)</span>
+                <span>14 (Base)</span>
+              </div>
+              <div class="ph-bar-container">
+                <div class="ph-bar-fill" id="ph-bar"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Panel 2: Muestra Problema de Laboratorio (Colocado al costado de Sensor de pH & Balances) -->
+          <section class="persona-panel chem-config">
+            <div class="panel-header">Muestra Problema de Laboratorio</div>
+
+            <div class="form-group">
+              <label for="select-sample" class="label">Seleccionar Muestra Real</label>
+              <div class="select-wrapper">
+                <select id="select-sample" class="persona-select">
+                  <option value="vinagre">🥗 Vinagre Comercial (Ácido Acético ~5%)</option>
+                  <option value="limon">🍋 Jugo de Limón Natural (Ácido Cítrico Triprótico)</option>
+                  <option value="aspirina">💊 Aspirina Disuelta (Ác. Acetilsalicílico)</option>
+                  <option value="fosforico">🧪 Ácido Fosfórico Técnico (H₃PO₄ 3 Puntos)</option>
+                  <option value="hcl_control">🔬 Ácido Clorhídrico Patrón (Control Analítico)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Selector de Indicador Químico -->
+            <div class="form-group">
+              <label for="select-indicator" class="label">Indicador Químico de pH</label>
+              <div class="select-wrapper">
+                <select id="select-indicator" class="persona-select">
+                  <option value="phenolphthalein">Fenolftaleína (pH 8.2 – 10.0)</option>
+                  <option value="bromothymol_blue">Azul de Bromotimol (pH 6.0 – 7.6)</option>
+                  <option value="methyl_orange">Naranja de Metilo (pH 3.1 – 4.4)</option>
+                  <option value="phenol_red">Rojo Fenol (pH 6.8 – 8.4)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Mini Card de Información de la Muestra e Indicador -->
+            <div class="sample-info-card">
+              <div class="sample-title-row">
+                <span class="sample-badge-type" id="sample-badge-type">Ácido Débil</span>
+                <span class="sample-formula" id="sample-formula">CH₃COOH</span>
+              </div>
+              <p class="sample-desc-text" id="sample-desc">
+                Vinagre blanco de mesa. Cuantificar el contenido de ácido acético aplicando la ecuación de Henderson-Hasselbalch y el viraje con fenolftaleína.
+              </p>
+              <div class="indicator-header-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #f1f5f9;">
+                <span class="indicator-color-dot" id="indicator-color-dot"></span>
+                <span class="indicator-name" id="indicator-name-badge">Fenolftaleína (pH 8.2 – 10.0)</span>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- Panel Inferior Izquierdo: Control de Bureta y Agitación -->
+        <section class="persona-panel valve-controls">
+          <div class="panel-header">Control de Bureta & Mezcla</div>
+          <div class="valve-status">
+            <span>Apertura Llave de Teflón:</span>
+            <span id="valve-percent">0%</span>
+          </div>
+          
+          <div class="control-row">
+            <input type="range" id="valve-slider" min="0" max="100" value="0" />
+          </div>
+          <div class="button-group">
+            <button id="btn-drop" class="persona-btn">+ 1 Gota</button>
+            <button id="btn-swirl" class="persona-btn secondary" title="Mantener presionado para agitar en círculos">🔄 Agitar Muestra</button>
+            <button id="btn-reset" class="persona-btn alert">Reiniciar</button>
+          </div>
+          <button id="btn-open-report" class="persona-btn report-btn">
+            📝 Reporte Cuantitativo (Calcular Muestra)
+          </button>
+        </section>
+      </div>
+
+      <!-- Columna Derecha: Cámara MediaPipe Ampliada + Curva de Titulación en Vivo de Gran Tamaño -->
+      <div class="hud-right-column">
+        <!-- Panel 1: Visión Artificial MediaPipe (Cámara Ampliada para 2 Manos) -->
+        <section class="persona-panel vision-panel">
+          <div class="panel-header">Control Gestual MediaPipe (2 Manos)</div>
+          <div class="camera-feed-container">
+            <video id="camera-video" autoplay playsinline muted></video>
+            <canvas id="camera-overlay-canvas"></canvas>
+            <div class="gesture-status-bar" id="gesture-status">Iniciando cámara...</div>
+          </div>
+          <div class="camera-actions-row" style="display: flex; gap: 8px; margin-top: 10px;">
+            <button id="btn-camera" class="persona-btn secondary" style="flex: 1; margin-top: 0;">
+              Activar / Pausar
+            </button>
+            <button id="btn-calibrate" class="persona-btn" style="background: #0284c7; flex: 1;" title="Inicia la guía rápida de calibración de 3 segundos">
+              🎯 Calibrar (3s)
+            </button>
+          </div>
+        </section>
+
+        <!-- Panel 2: CURVA DE TITULACIÓN EN VIVO AMPLIA (pH vs mL) -->
+        <section class="persona-panel curve-panel">
+          <div class="panel-header curve-header">
+            <span>Curva de Titulación en Vivo (pH vs mL)</span>
+            <span class="live-indicator">● EN VIVO</span>
+          </div>
+          <div class="curve-canvas-wrapper">
+            <canvas id="titration-curve-canvas"></canvas>
+          </div>
+          <div class="curve-footer-note" id="curve-status-note">
+            Buffer: Henderson-Hasselbalch activo
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- BANNERS DE ALERTA -->
+    <div id="homogeneity-alert-banner" class="alert-banner warning hidden">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <div class="alert-title">Error de laboratorio: falta de homogeneización</div>
+        <div class="alert-subtitle">El titulante se estancó en la superficie. Mueve la 2ª mano en círculos sobre el matraz para mezclar.</div>
+      </div>
+    </div>
+
+    <div id="splatter-alert-banner" class="alert-banner danger hidden">
+      <div class="alert-icon">💥</div>
+      <div class="alert-content">
+        <div class="alert-title">¡Muestra arruinada por salpicadura!</div>
+        <div class="alert-subtitle">Abriste la llave de paso de golpe. Las gotas salpicaron el lente y falsearon el volumen.</div>
+      </div>
+      <button id="btn-recover-splatter" class="persona-btn" style="margin-left: 14px; background: #ffffff; color: #dc2626;">
+        Limpiar y Reiniciar
+      </button>
+    </div>
+
+    <div id="alert-banner" class="alert-banner success hidden">
+      <span id="alert-text">Punto de equivalencia alcanzado</span>
+    </div>
+
+    <!-- MODAL DE REPORTE ANALÍTICO CUANTITATIVO -->
+    <div id="report-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>Reporte de Laboratorio Analítico</h3>
+          <button id="btn-close-report" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-intro">
+            Determina la concentración exacta de la muestra problema a partir de tu volumen experimental de viraje:
+          </p>
+
+          <div class="report-data-box">
+            <div class="data-row">
+              <span>Muestra problema:</span>
+              <strong id="rep-sample-name">Vinagre Comercial (Ácido Acético)</strong>
+            </div>
+            <div class="data-row">
+              <span>Alícuota en matraz (Vₐ):</span>
+              <strong id="rep-aliquot-vol">20.00 mL</strong>
+            </div>
+            <div class="data-row">
+              <span>Titulante en bureta:</span>
+              <strong id="rep-titrant-info">NaOH 0.100 M</strong>
+            </div>
+            <div class="data-row">
+              <span>Fórmula estequiométrica:</span>
+              <code id="rep-formula-text">C_muestra = (C_NaOH × V_NaOH) / V_alícuota</code>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 14px;">
+            <label class="label">Volumen de Viraje Observado en Bureta (mL):</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="number" id="input-exp-volume" class="persona-input" step="0.05" placeholder="Ej: 16.70" />
+              <button id="btn-use-current-vol" class="persona-btn secondary" style="font-size: 0.76rem; padding: 6px 10px;">
+                Usar lectura actual (<span id="current-reading-preview">0.00</span> mL)
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="label">Tu Concentración Calculada de la Muestra (Molaridad M):</label>
+            <input type="number" id="input-calc-conc" class="persona-input" step="0.001" placeholder="Ej: 0.0835" />
+          </div>
+
+          <button id="btn-evaluate-report" class="persona-btn" style="width: 100%; margin-top: 8px;">
+            🧪 Verificar Cálculo Analítico
+          </button>
+
+          <!-- Resultados y Evaluación Pedagógica -->
+          <div id="report-result-box" class="report-result-box hidden">
+            <div class="result-badge-row">
+              <span id="result-grade-badge" class="result-grade">EXCELENTE</span>
+              <span id="result-error-percent" class="result-error">Error: 0.24%</span>
+            </div>
+            <div class="result-details">
+              <div><strong>Dato real teórico:</strong> <span id="res-true-data">16.70 mL • 0.0835 M (0.835 M vinagre comercial)</span></div>
+              <p id="res-feedback-text" class="feedback-text">
+                ¡Gran precisión de laboratorio! Determinaste la acidez del vinagre con rigor universitario.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
