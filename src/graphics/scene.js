@@ -76,8 +76,8 @@ export class LabScene {
     const h = this.height;
 
     // Área central libre entre el bloque izquierdo (Sensor + Muestra) y el bloque derecho (Cámara + Curva)
-    let leftBoundary = Math.min(615, w * 0.43);
-    let rightBoundary = w - Math.min(465, w * 0.33);
+    let leftBoundary = Math.min(550, w * 0.40);
+    let rightBoundary = w - Math.min(430, w * 0.31);
 
     if (w < 1180) {
       leftBoundary = 20;
@@ -85,19 +85,19 @@ export class LabScene {
     }
 
     const cx = leftBoundary + (rightBoundary - leftBoundary) * 0.5;
-    const tableY = Math.min(h * 0.88, h - 70);
+    const tableY = Math.min(h * 0.88, h - 65);
 
-    const flaskH = Math.min(185, Math.max(150, h * 0.26));
-    const flaskBaseW = Math.min(145, flaskH * 0.85);
-    const flaskNeckW = 34;
-    const flaskNeckH = flaskH * 0.32;
+    const flaskH = Math.min(175, Math.max(135, h * 0.25));
+    const flaskBaseW = Math.min(140, flaskH * 0.84);
+    const flaskNeckW = 32;
+    const flaskNeckH = flaskH * 0.30;
     const flaskBottomY = tableY - 14;
     const flaskRimY = flaskBottomY - flaskH;
 
-    const tipLength = 36;
-    const tipY = flaskRimY - 38;
+    const tipLength = 34;
+    const tipY = flaskRimY - 34;
     const valveY = tipY - tipLength;
-    const buretteHeight = Math.min(360, Math.max(260, valveY - 55));
+    const buretteHeight = Math.min(350, Math.max(230, valveY - 50));
     const buretteTopY = valveY - buretteHeight;
     const buretteWidth = 26;
 
