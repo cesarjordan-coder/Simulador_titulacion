@@ -146,6 +146,7 @@
           <div class="button-group">
             <button id="btn-drop" class="persona-btn">+ 1 Gota</button>
             <button id="btn-swirl" class="persona-btn secondary" title="Mantener presionado para agitar en círculos">🔄 Agitar Muestra</button>
+            <button id="btn-loupe" class="persona-btn loupe-btn active" title="Activar/desactivar lupa óptica del menisco">🔍 Lupa Menisco</button>
             <button id="btn-reset" class="persona-btn alert">Reiniciar</button>
           </div>
           <button id="btn-open-report" class="persona-btn report-btn">
@@ -174,17 +175,29 @@
           </div>
         </section>
 
-        <!-- Panel 2: CURVA DE TITULACIÓN EN VIVO AMPLIA (pH vs mL) -->
+        <!-- Panel 2: CURVA DE TITULACIÓN EN VIVO AMPLIA CON 1ª Y 2ª DERIVADA Y EXPORTACIÓN CSV -->
         <section class="persona-panel curve-panel">
           <div class="panel-header curve-header">
-            <span>Curva de Titulación en Vivo (pH vs mL)</span>
-            <span class="live-indicator">● EN VIVO</span>
+            <div class="curve-title-area">
+              <span id="curve-main-title">Curva de Titulación</span>
+              <span class="live-indicator">● EN VIVO</span>
+            </div>
+            <div class="curve-mode-selector">
+              <button id="btn-curve-normal" class="curve-tab-btn active" title="Curva sigmoidea normal de pH vs mL">pH vs mL</button>
+              <button id="btn-curve-deriv1" class="curve-tab-btn" title="Primera derivada dpH/dV: detección del pico estequiométrico">1ª Deriv</button>
+              <button id="btn-curve-deriv2" class="curve-tab-btn" title="Segunda derivada d²pH/dV²: detección del cruce por cero">2ª Deriv</button>
+            </div>
           </div>
           <div class="curve-canvas-wrapper">
             <canvas id="titration-curve-canvas"></canvas>
           </div>
-          <div class="curve-footer-note" id="curve-status-note">
-            Buffer: Henderson-Hasselbalch activo
+          <div class="curve-footer-bar">
+            <div class="curve-footer-note" id="curve-status-note">
+              Monitoreo potenciométrico en tiempo real
+            </div>
+            <button id="btn-export-csv" class="export-csv-btn" title="Descargar datos experimentales en formato CSV para Excel">
+              📥 Exportar CSV
+            </button>
           </div>
         </section>
       </div>
@@ -280,6 +293,9 @@
         </div>
       </div>
     </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast-message" class="toast-notification hidden"></div>
 
   </div>
 

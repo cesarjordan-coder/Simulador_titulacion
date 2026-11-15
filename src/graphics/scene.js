@@ -37,6 +37,7 @@ export class LabScene {
     this.reactionPlume = 0;     // Intensidad de la mancha de contacto
 
     this.isSplattered = false;
+    this.showMeniscusLoupe = true;
     this.lastDropSpawnTime = 0;
     this.onVolumeChange = null;
 
@@ -367,6 +368,15 @@ export class LabScene {
     return bottomY - (baseLiquidHeight + volumeFraction * maxExtraLiquidH);
   }
 
+  toggleMeniscusLoupe() {
+    this.showMeniscusLoupe = !this.showMeniscusLoupe;
+    return this.showMeniscusLoupe;
+  }
+
+  setMeniscusLoupe(visible) {
+    this.showMeniscusLoupe = !!visible;
+  }
+
   render() {
     const ctx = this.ctx;
     const w = this.width;
@@ -380,6 +390,11 @@ export class LabScene {
     this.drawBurette(ctx);
     this.drawLiquidFlow(ctx);
     this.drawFlask(ctx);
+
+    // Lupa óptica de aforo y lectura del menisco cóncavo
+    if (this.showMeniscusLoupe) {
+      this.drawMeniscusLoupe(ctx);
+    }
 
     // Dibujar pantalla salpicada si hubo apertura brusca
     if (this.isSplattered) {
@@ -860,6 +875,261 @@ export class LabScene {
     });
 
     // Letrero técnico de vidrio comprometido
+    ctx.restore();
+  }
+
+  /**
+   * Lupa de Aforo y Lectura del Menisco Cóncavo
+   * Magnifica la columna de la bureta (4.2x) con graduaciones milimétricas de 0.1 mL,
+   * curvatura cóncava de tensión superficial y retícula óptica de lectura tangente
+   */
+  drawMeniscusLoupe(ctx) {
+    if (!this.layout || !this.layout.burette) return;
+    const { cx, topY, bottomY, height, width } = this.layout.burette;
+
+    // Volumen entregado de la bureta (0.00 a 50.00 mL)
+    const deliveredMl = Math.max(0, Math.min(50.0, 50.0 - this.remainingBuretteMl));
+    const fillFraction = Math.max(0, Math.min(1.0, this.remainingBuretteMl / 50.0));
+    const liquidTopY = bottomY - (height * fillFraction);
+
+    // Posición de la lupa: a la derecha de la bureta, siguiendo el nivel de líquido
+    const loupeRadius = 45;
+    const loupeX = Math.min(this.width - 435, cx + width / 2 + 75);
+    const loupeY = Math.max(topY + loupeRadius + 10, Math.min(bottomY - 35, liquidTopY));
+
+    // 1. Rayo / Cono de enfoque óptico desde la bureta hacia la lupa
+    ctx.save();
+    const sourceX = cx + width / 2;
+    const sourceY = liquidTopY;
+
+    const rayGrad = ctx.createLinearGradient(sourceX, sourceY, loupeX - loupeRadius, loupeY);
+    rayGrad.addColorStop(0, 'rgba(2, 132, 199, 0.40)');
+    rayGrad.addColorStop(1, 'rgba(2, 132, 199, 0.06)');
+
+    ctx.fillStyle = rayGrad;
+    ctx.beginPath();
+    ctx.moveTo(sourceX, sourceY - 4);
+    ctx.lineTo(loupeX - loupeRadius, loupeY - loupeRadius * 0.7);
+    ctx.lineTo(loupeX - loupeRadius, loupeY + loupeRadius * 0.7);
+    ctx.lineTo(sourceX, sourceY + 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Línea guía central punteada
+    ctx.strokeStyle = 'rgba(2, 132, 199, 0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([3, 2]);
+    ctx.beginPath();
+    ctx.moveTo(sourceX, sourceY);
+    ctx.lineTo(loupeX - loupeRadius, loupeY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // 2. Interior de la Lupa (Corte circular)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(loupeX, loupeY, loupeRadius, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Fondo del lente
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(loupeX - loupeRadius, loupeY - loupeRadius, loupeRadius * 2, loupeRadius * 2);
+
+    // Tubo de vidrio magnificado (4.2x)
+    const magFactor = 4.2;
+    const magTubeW = width * magFactor;
+    const magLeft = loupeX - magTubeW / 2;
+    const magRight = loupeX + magTubeW / 2;
+
+    ctx.fillStyle = 'rgba(240, 249, 255, 0.55)';
+    ctx.fillRect(magLeft, loupeY - loupeRadius, magTubeW, loupeRadius * 2);
+
+    // Menisco cóncavo: la curvatura desciende al centro (loupeY)
+    const meniscusDepth = 10;
+    
+    // Líquido acuoso bajo el menisco
+    const liqGrad = ctx.createLinearGradient(magLeft, 0, magRight, 0);
+    liqGrad.addColorStop(0, 'rgba(186, 230, 253, 0.9)');
+    liqGrad.addColorStop(0.3, 'rgba(224, 242, 254, 0.98)');
+    liqGrad.addColorStop(0.7, 'rgba(186, 230, 253, 0.9)');
+    liqGrad.addColorStop(1, 'rgba(125, 211, 252, 0.85)');
+
+    ctx.fillStyle = liqGrad;
+    ctx.beginPath();
+    ctx.moveTo(magLeft, loupeY - meniscusDepth);
+    ctx.bezierCurveTo(
+      magLeft + 15, loupeY + 2,
+      magRight - 15, loupeY + 2,
+      magRight, loupeY - meniscusDepth
+    );
+    ctx.lineTo(magRight, loupeY + loupeRadius);
+    ctx.lineTo(magLeft, loupeY + loupeRadius);
+    ctx.closePath();
+    ctx.fill();
+
+    // Curva superficial del menisco cóncavo
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.moveTo(magLeft, loupeY - meniscusDepth);
+    ctx.bezierCurveTo(
+      magLeft + 15, loupeY + 2,
+      magRight - 15, loupeY + 2,
+      magRight, loupeY - meniscusDepth
+    );
+    ctx.stroke();
+
+    // Sombra del fondo cóncavo
+    ctx.strokeStyle = 'rgba(14, 116, 144, 0.75)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(loupeX, loupeY, 14, 0, Math.PI, false);
+    ctx.stroke();
+
+    // Paredes de vidrio exteriores
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(magLeft, loupeY - loupeRadius);
+    ctx.lineTo(magLeft, loupeY + loupeRadius);
+    ctx.moveTo(magRight, loupeY - loupeRadius);
+    ctx.lineTo(magRight, loupeY + loupeRadius);
+    ctx.stroke();
+
+    // Graduaciones milimétricas magnificadas (0.1 mL de resolución)
+    const pxPerMl = (height / 50.0) * magFactor;
+    const minMlVis = Math.max(0, Math.floor(deliveredMl - 2.5));
+    const maxMlVis = Math.min(50, Math.ceil(deliveredMl + 2.5));
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+
+    for (let m = minMlVis; m <= maxMlVis; m += 0.1) {
+      const mlRound = Math.round(m * 10) / 10;
+      const dy = (mlRound - deliveredMl) * pxPerMl;
+      const tickY = loupeY + dy;
+
+      if (tickY < loupeY - loupeRadius - 5 || tickY > loupeY + loupeRadius + 5) continue;
+
+      const isMajor = Math.abs(mlRound - Math.round(mlRound)) < 0.01;
+      const isHalf = Math.abs(mlRound - Math.floor(mlRound) - 0.5) < 0.01;
+
+      ctx.strokeStyle = '#0f172a';
+      if (isMajor) {
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(magRight - 2, tickY);
+        ctx.lineTo(magRight - 18, tickY);
+        ctx.stroke();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '700 9.5px "Plus Jakarta Sans", sans-serif';
+        ctx.fillText(Math.round(mlRound).toString(), magRight - 21, tickY);
+      } else if (isHalf) {
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(magRight - 2, tickY);
+        ctx.lineTo(magRight - 12, tickY);
+        ctx.stroke();
+      } else {
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(magRight - 2, tickY);
+        ctx.lineTo(magRight - 7, tickY);
+        ctx.stroke();
+      }
+    }
+
+    // 3. Retícula / Línea óptica roja de alineación en el fondo del menisco
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(loupeX - loupeRadius, loupeY);
+    ctx.lineTo(loupeX + loupeRadius, loupeY);
+    ctx.stroke();
+
+    // Flechitas rojas
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(loupeX - loupeRadius + 8, loupeY - 4);
+    ctx.lineTo(loupeX - loupeRadius + 8, loupeY + 4);
+    ctx.lineTo(loupeX - loupeRadius + 14, loupeY);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(loupeX + loupeRadius - 8, loupeY - 4);
+    ctx.lineTo(loupeX + loupeRadius - 8, loupeY + 4);
+    ctx.lineTo(loupeX + loupeRadius - 14, loupeY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Brillo óptico diagonal
+    const lensGlare = ctx.createLinearGradient(
+      loupeX - loupeRadius, loupeY - loupeRadius,
+      loupeX + loupeRadius, loupeY + loupeRadius
+    );
+    lensGlare.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+    lensGlare.addColorStop(0.35, 'rgba(255, 255, 255, 0.1)');
+    lensGlare.addColorStop(0.65, 'rgba(255, 255, 255, 0)');
+    lensGlare.addColorStop(1, 'rgba(255, 255, 255, 0.25)');
+    ctx.fillStyle = lensGlare;
+    ctx.fillRect(loupeX - loupeRadius, loupeY - loupeRadius, loupeRadius * 2, loupeRadius * 2);
+
+    ctx.restore();
+
+    // 4. Bisel metálico exterior
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(loupeX, loupeY, loupeRadius, 0, Math.PI * 2);
+    ctx.lineWidth = 5.0;
+    const rimGrad = ctx.createLinearGradient(
+      loupeX - loupeRadius, loupeY - loupeRadius,
+      loupeX + loupeRadius, loupeY + loupeRadius
+    );
+    rimGrad.addColorStop(0, '#f8fafc');
+    rimGrad.addColorStop(0.25, '#94a3b8');
+    rimGrad.addColorStop(0.5, '#f1f5f9');
+    rimGrad.addColorStop(0.75, '#64748b');
+    rimGrad.addColorStop(1, '#cbd5e1');
+    ctx.strokeStyle = rimGrad;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.arc(loupeX, loupeY, loupeRadius + 2.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(loupeX, loupeY, loupeRadius - 2.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 5. Badge flotante inferior
+    const badgeText = `${deliveredMl.toFixed(2)} mL`;
+    ctx.font = '700 8.5px "Plus Jakarta Sans", sans-serif';
+    const tagW = ctx.measureText(badgeText).width + 12;
+    const tagH = 15;
+    const tagX = loupeX - tagW / 2;
+    const tagY = loupeY + loupeRadius + 6;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(tagX, tagY, tagW, tagH, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#0284c7';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(badgeText, loupeX, tagY + tagH / 2);
+
+    ctx.font = '600 6.5px "Plus Jakarta Sans", sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('FONDO CÓNCAVO (0.1 mL)', loupeX, tagY + tagH + 7);
+
     ctx.restore();
   }
 }

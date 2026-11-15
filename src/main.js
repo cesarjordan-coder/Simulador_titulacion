@@ -491,6 +491,152 @@ if (btnEvaluateReport) {
   });
 }
 
+// ========================================================
+// TOAST NOTIFICATIONS
+// ========================================================
+let toastTimeout = null;
+function showToast(message, duration = 3200) {
+  const toastEl = document.getElementById('toast-message');
+  if (!toastEl) return;
+  toastEl.textContent = message;
+  toastEl.classList.remove('hidden');
+
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toastEl.classList.add('hidden');
+  }, duration);
+}
+
+// ========================================================
+// LUPA DE MENISCO EN LA BURETA
+// ========================================================
+const btnLoupe = document.getElementById('btn-loupe');
+if (btnLoupe) {
+  btnLoupe.addEventListener('click', () => {
+    const isVisible = labScene.toggleMeniscusLoupe();
+    if (isVisible) {
+      btnLoupe.classList.add('active');
+      showToast('🔍 Lupa de menisco activada (Zoom 4.2x en tangente inferior)');
+    } else {
+      btnLoupe.classList.remove('active');
+      showToast('Lupa de menisco desactivada');
+    }
+  });
+}
+
+// ========================================================
+// MODOS DE LA CURVA: pH vs mL, 1ª DERIVADA Y 2ª DERIVADA
+// ========================================================
+const btnCurveNormal = document.getElementById('btn-curve-normal');
+const btnCurveDeriv1 = document.getElementById('btn-curve-deriv1');
+const btnCurveDeriv2 = document.getElementById('btn-curve-deriv2');
+const curveMainTitle = document.getElementById('curve-main-title');
+
+function setCurveMode(mode) {
+  [btnCurveNormal, btnCurveDeriv1, btnCurveDeriv2].forEach(b => b?.classList.remove('active'));
+  if (mode === 'deriv1') {
+    btnCurveDeriv1?.classList.add('active');
+    curvePlotter.setMode('deriv1');
+    if (curveMainTitle) curveMainTitle.textContent = '1ª Derivada (dpH / dV)';
+    showToast('📈 Modo 1ª Derivada: el pico máximo indica el punto estequiométrico exacto');
+  } else if (mode === 'deriv2') {
+    btnCurveDeriv2?.classList.add('active');
+    curvePlotter.setMode('deriv2');
+    if (curveMainTitle) curveMainTitle.textContent = '2ª Derivada (d²pH / dV²)';
+    showToast('📉 Modo 2ª Derivada: el cruce por cero indica el punto de inflexión');
+  } else {
+    btnCurveNormal?.classList.add('active');
+    curvePlotter.setMode('normal');
+    if (curveMainTitle) curveMainTitle.textContent = 'Curva de Titulación';
+  }
+}
+
+if (btnCurveNormal) btnCurveNormal.addEventListener('click', () => setCurveMode('normal'));
+if (btnCurveDeriv1) btnCurveDeriv1.addEventListener('click', () => setCurveMode('deriv1'));
+if (btnCurveDeriv2) btnCurveDeriv2.addEventListener('click', () => setCurveMode('deriv2'));
+
+// ========================================================
+// EXPORTACIÓN DE DATOS A CSV / EXCEL
+// ========================================================
+const btnExportCsv = document.getElementById('btn-export-csv');
+
+function exportTitrationDataToCsv() {
+  const history = chemistry.getCurveHistory();
+  if (!history || history.length === 0) {
+    showToast('⚠️ Aún no hay datos de titulación registrados. Dosifica titulante para exportar.');
+    return;
+  }
+
+  const sample = chemistry.sample;
+  const titrant = chemistry.titrant;
+  const indicator = INDICATORS[chemistry.indicator] || INDICATORS.phenolphthalein;
+  const eqState = chemistry.calculateState();
+
+  let csvContent = '\uFEFF'; // BOM para que Excel abra UTF-8 con tildes y caracteres químicos
+  csvContent += `# ================================================================\n`;
+  csvContent += `# REPORTE EXPERIMENTAL DE TITULACIÓN POTENCIOMÉTRICA\n`;
+  csvContent += `# Muestra: ${sample.name} (${sample.formula})\n`;
+  csvContent += `# Tipo: ${sample.type}\n`;
+  csvContent += `# Alícuota analizada: ${sample.aliquotVolumeMl.toFixed(2)} mL\n`;
+  csvContent += `# Titulante patrón: ${titrant.formula} ${titrant.concentrationM.toFixed(3)} M\n`;
+  csvContent += `# Indicador químico: ${indicator.name} (${indicator.rangeText})\n`;
+  csvContent += `# Punto de equivalencia teórico: ${eqState.equivalenceVolumeMl.toFixed(2)} mL (pH ${eqState.equivalencePh.toFixed(2)})\n`;
+  csvContent += `# Fecha y hora: ${new Date().toLocaleString()}\n`;
+  csvContent += `# ================================================================\n\n`;
+
+  csvContent += 'Punto,Volumen_NaOH_mL,pH_Sensor,pH_Teorico,dpH_dV_1aDerivada,d2pH_dV2_2aDerivada,Fase_Quimica\n';
+
+  history.forEach((pt, idx) => {
+    let d1Val = '0.00';
+    let d2Val = '0.00';
+
+    if (idx > 0) {
+      const prev = history[idx - 1];
+      const dv = pt.v - prev.v;
+      if (dv > 0.002) {
+        d1Val = ((pt.ph - prev.ph) / dv).toFixed(2);
+      }
+    }
+
+    if (idx > 1) {
+      const prev = history[idx - 1];
+      const prevPrev = history[idx - 2];
+      const dv1 = pt.v - prev.v;
+      const dv2 = prev.v - prevPrev.v;
+      if (dv1 > 0.002 && dv2 > 0.002) {
+        const rate1 = (pt.ph - prev.ph) / dv1;
+        const rate2 = (prev.ph - prevPrev.ph) / dv2;
+        const dvMid = (dv1 + dv2) / 2.0;
+        d2Val = ((rate1 - rate2) / dvMid).toFixed(2);
+      }
+    }
+
+    let phase = 'Región Buffer Henderson-Hasselbalch';
+    if (pt.v === 0) phase = 'Inicio de Titulación';
+    else if (Math.abs(pt.v - eqState.equivalenceVolumeMl) < 0.15) phase = 'Punto de Equivalencia Estequiométrico';
+    else if (pt.v > eqState.equivalenceVolumeMl + 0.3) phase = 'Sobretitulación (Exceso de NaOH)';
+
+    csvContent += `${idx + 1},${pt.v.toFixed(2)},${pt.ph.toFixed(2)},${pt.theoreticalPh ? pt.theoreticalPh.toFixed(2) : pt.ph.toFixed(2)},${d1Val},${d2Val},"${phase}"\n`;
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const cleanSample = (sample.id || 'muestra').replace(/[^a-zA-Z0-9]/g, '_');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `Titulacion_${cleanSample}_datos.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  showToast(`📥 Archivo CSV descargado con éxito (${history.length} puntos para Excel)`);
+}
+
+if (btnExportCsv) {
+  btnExportCsv.addEventListener('click', exportTitrationDataToCsv);
+}
+
 // Sincronización inicial
 syncAll();
 
